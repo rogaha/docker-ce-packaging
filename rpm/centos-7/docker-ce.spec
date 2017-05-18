@@ -6,6 +6,7 @@ Group: Tools/Docker
 License: ASL 2.0
 Source0: engine.tgz
 Source1: cli.tgz
+Source2: metrics-plugin-rootfs.tgz
 URL: https://www.docker.com
 Vendor: Docker
 Packager: Docker <support@docker.com>
@@ -135,6 +136,10 @@ install -p -m 644 engine/contrib/syntax/vim/syntax/dockerfile.vim $RPM_BUILD_ROO
 install -d $RPM_BUILD_ROOT/usr/share/nano
 install -p -m 644 engine/contrib/syntax/nano/Dockerfile.nanorc $RPM_BUILD_ROOT/usr/share/nano/Dockerfile.nanorc
 
+# add metrics-plugin
+install -d $RPM_BUILD_ROOT/usr/tmp
+install -p -m 644 %{SOURCE2} $RPM_BUILD_ROOT/usr/tmp
+
 # list files owned by the package here
 %files
 %doc engine/AUTHORS engine/CHANGELOG.md engine/CONTRIBUTING.md engine/LICENSE engine/MAINTAINERS engine/NOTICE engine/README.md
@@ -159,8 +164,29 @@ install -p -m 644 engine/contrib/syntax/nano/Dockerfile.nanorc $RPM_BUILD_ROOT/u
 /usr/share/vim/vimfiles/ftdetect/dockerfile.vim
 /usr/share/vim/vimfiles/syntax/dockerfile.vim
 /usr/share/nano/Dockerfile.nanorc
+/usr/tmp/metrics-plugin-rootfs.tgz
+
+%pre
+if docker plugin inspect docker/metrics-plugin > /dev/null 2>&1; then
+    docker plugin inspect docker/metrics-plugin > /usr/tmp/metrics-plugin.json
+    docker plugin rm -f docker/metrics-plugin
+fi
 
 %post
+cd /usr/tmp/ && tar -xvf metrics-plugin-rootfs.tgz
+docker plugin create docker/metrics-plugin /usr/tmp/plugin
+docker plugin set docker/metrics-plugin edition_name={?dist} edition_type=%{name} edition_version=%{_release}
+if [ -e /usr/tmp/metrics-plugin.json ]; then
+    # set the metrics plugin to its previous state
+    if grep '"Enabled": true' /usr/tmp/metrics-plugin.json; then
+        docker plugin enable docker/metrics-plugin
+    else
+        docker plugin disable docker/metrics-plugin
+else
+    # docker-ee should be enabled by default
+    docker plugin disable docker/metrics-plugin
+fi
+
 %systemd_post docker
 if ! getent group docker > /dev/null; then
     groupadd --system docker

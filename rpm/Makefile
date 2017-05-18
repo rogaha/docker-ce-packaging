@@ -38,6 +38,10 @@ tgz:
 		-w /v \
 		$(TGZ_BUILD_IMAGE) \
 		-c -z -C / -f /v/engine.tgz engine
+		@echo "Creating $(BUNDLES_DIR)/$(MAKECMDGOALS)/SOURCES/metrics-plugin-rootfs.tgz from \
+		https://s3-us-west-2.amazonaws.com/docker-metrics-plugin/stable/17.06.0/metrics-plugin-rootfs.tgz"
+		curl -o $(BUNDLES_DIR)/$(MAKECMDGOALS)/SOURCES/metrics-plugin-rootfs.tgz \
+		https://s3-us-west-2.amazonaws.com/docker-metrics-plugin/stable/17.06.0/metrics-plugin-rootfs.tgz
 
 rpm: centos-7 fedora-24 fedora-25
 
